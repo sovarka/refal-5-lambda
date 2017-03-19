@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <errno.h>
 #include <exception>
+#include <functional>
 #include <map>
 #include <new>
 #include <set>
@@ -8,6 +10,8 @@
 #include <string>
 #include <string.h>
 #include <time.h>
+#include <utility>
+#include <vector>
 
 #include <assert.h>
 
@@ -1939,9 +1943,13 @@ namespace refalrts {
 
 namespace profiler {
 
+typedef std::map<std::string, long> FunctionMetricTable;
+
 void start_profiler();
 void end_profiler();
 void read_counters(unsigned long counters[]);
+void print_profile(const FunctionMetricTable& table, const char *name);
+void add_profile_metric(const std::string& function);
 
 #ifndef DONT_PRINT_STATISTICS
 struct TimeItem {
@@ -2003,6 +2011,12 @@ void stop_function();
 clock_t g_counters[cCounter_TOTAL] = { 0 };
 clock_t g_prev_cutoff;
 State g_current_state = cInRuntime;
+
+FunctionMetricTable g_function_time;
+FunctionMetricTable g_function_count;
+
+std::string g_current_function;
+clock_t g_current_function_start;
 
 } // namespace profiler
 
@@ -2319,7 +2333,7 @@ void refalrts::profiler::end_profiler() {
     items[i].counter = counters[items[i].counter];
   }
 
-  qsort(items, nItems, sizeof(items[0]), reverse_compare);
+  std::qsort(items, nItems, sizeof(items[0]), reverse_compare);
 
   const double cfSECS_PER_CLOCK = 1.0 / CLOCKS_PER_SEC;
   unsigned long total = counters[refalrts::cPerformanceCounter_TotalTime];
@@ -2337,6 +2351,53 @@ void refalrts::profiler::end_profiler() {
   }
 
 #endif // ifndef DONT_PRINT_STATISTICS
+
+  print_profile(g_function_time, "_profile_time.txt");
+  print_profile(g_function_count, "_profile_count.txt");
+}
+
+void refalrts::profiler::print_profile(
+  const FunctionMetricTable& table, const char *name
+) {
+  FILE *profile = fopen(name, "w");
+  typedef std::vector< std::pair<long, std::string> > FunctionMetricVector;
+  FunctionMetricVector function_times;
+  long fn_total = 0;
+
+  for (
+    FunctionMetricTable::const_iterator p = table.begin();
+    p != table.end();
+    ++p
+  ) {
+    function_times.push_back(make_pair(p->second, p->first));
+    fn_total += p->second;
+  }
+
+  std::sort(function_times.begin(), function_times.end());
+
+  long pareto = 0;
+  for (
+    FunctionMetricVector::reverse_iterator p = function_times.rbegin();
+    p < function_times.rend();
+    ++p
+  ) {
+    pareto += p->first;
+    fprintf(
+      profile, "%s -> %d (%.2f %%, += %.2f %%)\n",
+      p->second.c_str(), (int) p->first, 100.0 * p->first / fn_total,
+      100.0 * pareto / fn_total
+    );
+  }
+
+  fclose(profile);
+}
+
+void refalrts::profiler::add_profile_metric(const std::string& function) {
+  clock_t step = clock();
+  profiler::g_function_time[g_current_function] += step - g_current_function_start;
+  profiler::g_function_count[g_current_function] += 1;
+  g_current_function_start = step;
+  g_current_function = function;
 }
 
 namespace refalrts {
@@ -4676,6 +4737,9 @@ refalrts::FnResult refalrts::vm::main_loop() {
   const RefalNumber *numbers = 0;
   const StringItem *strings = 0;
 
+  profiler::g_current_function_start = clock();
+  profiler::g_current_function = "<startup_code>";
+
   vm::Stack<const RASLCommand*>& open_e_stack = vm::g_open_e_stack;
   vm::Stack<Iter>& context = vm::g_context;
 
@@ -5446,6 +5510,7 @@ refalrts::FnResult refalrts::vm::main_loop() {
             callee = function->function_info;
             res = cSuccess;
           } else if (cDataClosure == function->tag) {
+            profiler::add_profile_metric("<unwrap_closure>");
             refalrts::Iter head = function->link_info;
 
 #ifdef ENABLE_DEBUGGER
@@ -5496,6 +5561,8 @@ refalrts::FnResult refalrts::vm::main_loop() {
           if (res != cSuccess) {
             return res;
           }
+
+          profiler::add_profile_metric(callee->name.name);
           rasl = callee->rasl;
           stack_top = 0;
         }
