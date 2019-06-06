@@ -1,5 +1,6 @@
 $INCLUDE "LibraryEx";
 
+
 *FROM Desugaring-UnCondition
 $EXTERN NewVarName;
 $EXTERN ExtractVariables;
@@ -37,17 +38,17 @@ FormatAssigns {
 }
 
 $ENTRY GenericMatch {
-   (e.Pattern) (e.LPattern)
-     = <Solve
-        (<ExtractVariables ((e.Pattern e.LPattern) (/* пусто */)) >)
-        ((e.Pattern) ':' (e.LPattern))
-       >
-       : {
-           Success (() (e.Assigns)) = Clear <FormatAssigns e.Assigns>;
-           Failure = Failure;
-           Undefined = Undefined;
-           e.Other = Undefined;
-         }
+  (e.Pattern) (e.LPattern)
+    = <Solve
+       (<ExtractVariables ((e.Pattern e.LPattern) (/* пусто */)) >)
+       ((e.Pattern) ':' (e.LPattern))
+      >
+      : {
+          Success (() (e.Assigns)) = Clear <FormatAssigns e.Assigns>;
+          Failure = Failure;
+          Undefined = Undefined;
+          e.Other = Undefined;
+        }
 }
 
 /*
@@ -265,6 +266,16 @@ Solution-PostProcess {
         e.E
       = ;
 
+  /*
+    если есть идентичные сужения, то удаляем их
+  */
+
+  (e.Contractions) (e.Assigns)
+    , e.Contractions
+    : e.B (t.C ':' t.C) e.E
+    = <Solution-PostProcess (e.B e.E) (e.Assigns)>;
+
+
   (e.Contractions) (e.Assigns)
     , e.Assigns
       : e.B
@@ -273,6 +284,8 @@ Solution-PostProcess {
         (e.Expr2 ':' (TkVariable e.HIndex))
         e.E
     = Undefined;
+
+
 
   (e.Contractions) (e.Assigns) = Success (e.Contractions) (e.Assigns)
 }
@@ -460,15 +473,6 @@ Solve-TermEquation {
       (e.UsedVars)
       (e.Contrs)
       e.Equations
-*      <Map
-*        {
-*          ((e.Expr) ':' (e.Lexpr)) =
-*          ((e.Expr) ':'
-*            (<ReplaceForeign e.Lexpr (t.HSvar ':' t.PSvar)>)
-*          );
-*        }
-*        e.Equations
-*      >
       (e.Assigns (t.PSvar ':' t.HSvar));
 
 
@@ -484,32 +488,6 @@ Solve-TermEquation {
         e.Equations
         (e.Assigns)
       >;
-
-*  /* P - s-переменная, H - чужая s-переменная */
-*  (e.UsedVars) t.PSvar t.HSvar (e.Contrs) e.Equations (e.Assigns)
-*    , t.PSvar t.HSvar
-*    : (TkVariable 's' e.Pindex) (TkVariable 'as' e.Hindex)
-*    = Success
-*      (e.UsedVars)
-*      <AddContraction
-*        (t.PSvar ':' (TkVAriable 's' e.Hindex))
-*        (e.Contrs)
-*        e.Equations
-*        (e.Assigns)
-*      >;
-*
-*  /* P - символ, H - чужая s-переменная */
-*  (e.UsedVars) t.Symbol t.Svar (e.Contrs) e.Equations (e.Assigns)
-*    , t.Symbol t.Svar
-*    : (Symbol s.Type e.Info) (TkVariable 'as' e.Hindex)
-*    = Success
-*      (e.UsedVars)
-*      <AddContractions
-*        (((TkVariable 's' e.Hindex) ':' t.Symbol) ((TkVariable 'as' e.Hindex) ':' t.Symbol))
-*        (e.Contrs)
-*        e.Equations
-*        (e.Assigns)
-*      >;
 
   /* P - терм, H - t-переменная */
   (e.UsedVars) t.PVar t.HVar (e.Contrs) e.Equations (e.Assigns)
@@ -588,32 +566,6 @@ IsTerm {
 
   /* s-, t-переменная, скобки обоих видов, символ */
   t.OtherTerm = True;
-}
-
-
-/*
-  Замена перменных на чужие
-
-  <ReplaceForeign e.Lexpr (t.Replaced ':' t.Foreign)>  == e.Lexpr^
-*/
-
-ReplaceForeign {
-  e.Lexpr (t.Replaced ':' t.Foreign)
-    , t.Replaced t.Foreign
-    : (TkVariable 's' e.Rindex) (TkVariable 's' e.Findex)
-    = <Map
-        {
-          (ADT-Brackets e.Body) =
-            <ReplaceForeign e.Body (t.Replaced ':' t.Foreign)>;
-          (Brackets e.Body) =
-            <ReplaceForeign e.Body (t.Replaced ':' t.Foreign)>;
-
-          (TkVariable 's' e.Rindex) = (TkVariable 'as' e.Findex);
-          t.Other = t.Other;
-        }
-        e.Lexpr
-      >: e.Lexpr^
-    = e.Lexpr
 }
 
 /*
