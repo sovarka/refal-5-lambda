@@ -164,10 +164,9 @@ IsLexpr {
 }
 
 IsLexpr-Aux {
-  e.B (TkVariable s.Type e.Index1)
-  e.M (TkVariable s.Type e.Index2)
+  e.B (TkVariable 'e' e.Index1)
+  e.M (TkVariable 'e' e.Index2)
   e.E (e.ETVars)
-    , <OneOf s.Type 'e' 't'> : True
     = (() False);
 
   e.Expr (e.ETVars)
