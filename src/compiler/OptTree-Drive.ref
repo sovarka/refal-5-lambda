@@ -599,7 +599,7 @@ ApplyAssigns-Term {
     = (ADT-Brackets (e.Name) <ApplyAssigns e.Expr (e.Assigns)>);
 
   t.T (e.B (e.Asgn ':' t.T) e.E)
-    = e.Asgn;
+    = <ApplyAssigns e.Asgn (e.B (e.Asgn ':' t.T) e.E)>;
 
   t.T (e.Assigns) = t.T
 }
@@ -638,7 +638,7 @@ ApplyContractions-Term-Warmup {
     = (ADT-Brackets (e.Name) <ApplyContractions e.Expr (e.Contrs)>);
 
   t.Term (e.B (t.Term ':' e.Contr) e.E)
-    = e.Contr;
+    = <ApplyContractions e.Contr (e.B (t.Term ':' e.Contr) e.E)>;
 
   t.T (e.Contrs) = t.T
 }
@@ -653,7 +653,7 @@ ApplyContractions-Term {
     = (ADT-Brackets (e.Name) <ApplyContractions e.Expr (e.Contrs)>);
 
   t.Term (e.B (t.Term ':' e.Contr) e.E)
-    = e.Contr;
+    = <ApplyContractions e.Contr (e.B (t.Term ':' e.Contr) e.E)>;
 
   t.T (e.Contrs) = t.T
 }
