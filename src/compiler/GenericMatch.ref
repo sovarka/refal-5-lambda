@@ -267,12 +267,20 @@ Solution-PostProcess {
       = ;
 
   /*
+    если есть идентичные присваивания, то удалаяем их
+  */
+  (e.Contractions) (e.Assigns)
+    , e.Assigns
+    : e.B (e.C ':' e.C) e.E
+    = <Solution-PostProcess (e.Contractions) (e.B e.E)>;
+
+  /*
     если есть идентичные сужения, то удаляем их
   */
 
   (e.Contractions) (e.Assigns)
     , e.Contractions
-    : e.B (t.C ':' t.C) e.E
+    : e.B (e.C ':' e.C) e.E
     = <Solution-PostProcess (e.B e.E) (e.Assigns)>;
 
 
@@ -476,7 +484,7 @@ Solve-TermEquation {
       (e.Assigns (t.PSvar ':' t.HSvar));
 
 
-   /* P - s-переменная, H - символ */
+  /* P - s-переменная, H - символ */
   (e.UsedVars) t.Svar t.Symbol (e.Contrs) e.Equations (e.Assigns)
     , t.Svar : (TkVariable 's' e.Pindex)
     , <IsSVarSubset t.Symbol> : True

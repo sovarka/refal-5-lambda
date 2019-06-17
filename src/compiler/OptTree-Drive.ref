@@ -154,6 +154,7 @@ IsPassiveCall-Aux {
   (ADT-Brackets e.Expr) = <IsPassiveCall e.Expr>;
   (CallBrackets e.Expr) = False;
   (ColdCallBrackets e.Expr) = False;
+  (ClosureBrackets e.Expr) = False;
   t.Other = True;
 }
 
@@ -280,6 +281,8 @@ InlineSentence-Aux {
     : Success t.InlinedF
     , t.InlinedF
     : (Inline s.ScopeClass (e.Name) Sentences ((e.LS) (e.RS)) e.Rest)
+    /* Попытка оптимизации, только если вызов пассивный */
+    , <IsPassiveCall e.Args>: True
     = <Solve
         (<ExtractVariables ((e.Left e.Right) ())>)
         ((e.Args) ':' (e.LS))
@@ -316,7 +319,7 @@ InlineSentence-Aux {
                 WithWarmup
               >
               : e.S
-            = ((e.Left) (e.S)) t.newFunc;
+            = ((e.Left) (e.S)) t.newFunc
 
           /*
             Замена вызова на холодный
@@ -359,7 +362,7 @@ DriveSentence-Aux {
     : s.IsLexpr
 
     /* Попытка оптимизации, только если вызов пассивный */
-    , <IsPassiveCall e.Args> : True
+    , <IsPassiveCall e.Args>: True
     = <Solve
         (<ExtractVariables ((e.Left e.Right) ())>)
         ((e.Args) ':' (e.LS))
@@ -374,8 +377,19 @@ DriveSentence-Aux {
           = <ApplySolutions
               ((e.Left) (e.Expr)) (e.RS) ((() (e.Assigns))) t.DrivenF
             >
-            : e.Sentences
-          = e.Sentences;
+            : e.Sentences = e.Sentences;
+*          = <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
+*            <Prout 'FunctionName:' e.Name>
+*            <Prout 'ARGS: ' e.Args '\n'>
+*            <Prout '/n ------------------------------- /n'>
+*            <Prout 'SUCCESSFUL DRIVE CLEAN: ' e.Sentences
+*                      '\nBEFORELEFT:' e.Left
+*                      '\nBEFORERIGHT:' e.Right
+*                      '\n LEFTEQ: ' e.Args
+*                      '\n RIGHTEQ: ' e.LS
+*                      '\n EXPR!!' e.Expr
+*                      '\n NAME' e.Name
+*                      '\nSOLUTIONS:' e.Assigns> e.Sentences ;
 
         /*
            В случае "грязного" решения добавляем вызов остаточной
@@ -592,8 +606,14 @@ ApplyAssigns {
 ApplyAssigns-Term {
   (Brackets e.Expr) (e.Assigns) = (Brackets <ApplyAssigns e.Expr (e.Assigns)>);
 
-  (CallBrackets t.F e.Args) (e.Assigns)
-    = (CallBrackets t.F <ApplyAssigns e.Args (e.Assigns)>);
+  (CallBrackets e.Args) (e.Assigns)
+    = (CallBrackets <ApplyAssigns e.Args (e.Assigns)>);
+
+  (ColdCallBrackets e.Args) (e.Assigns)
+    = (ColdCallBrackets <ApplyAssigns e.Args (e.Assigns)>);
+
+  (ClosureBrackets e.Args) (e.Assigns)
+    = (ClosureBrackets <ApplyAssigns e.Args (e.Assigns)>);
 
   (ADT-Brackets (e.Name) e.Expr) (e.Assigns)
     = (ADT-Brackets (e.Name) <ApplyAssigns e.Expr (e.Assigns)>);
@@ -601,7 +621,7 @@ ApplyAssigns-Term {
   t.T (e.B (e.Asgn ':' t.T) e.E)
     = <ApplyAssigns e.Asgn (e.B (e.Asgn ':' t.T) e.E)>;
 
-  t.T (e.Assigns) = t.T
+  t.T (e.Assigns) = t.T;
 }
 
 /*
@@ -628,11 +648,14 @@ ApplyContractions {
 ApplyContractions-Term-Warmup {
   (Brackets e.Expr) (e.Contrs) = (Brackets <ApplyContractions e.Expr (e.Contrs)>);
 
-  (CallBrackets t.F e.Args) (e.Contrs)
-    = (CallBrackets t.F <ApplyContractions e.Args (e.Contrs)>);
+  (CallBrackets e.Args) (e.Contrs)
+    = (CallBrackets <ApplyContractions e.Args (e.Contrs)>);
 
-  (ColdCallBrackets t.F e.Args) (e.Contrs)
-    = (CallBrackets t.F <ApplyContractions e.Args (e.Contrs)>);
+  (ColdCallBrackets e.Args) (e.Contrs)
+    = (CallBrackets <ApplyContractions e.Args (e.Contrs)>);
+
+  (ClosureBrackets e.Args) (e.Contrs)
+    = (ClosureBrackets <ApplyContractions e.Args (e.Contrs)>);
 
   (ADT-Brackets (e.Name) e.Expr) (e.Contrs)
     = (ADT-Brackets (e.Name) <ApplyContractions e.Expr (e.Contrs)>);
@@ -646,8 +669,14 @@ ApplyContractions-Term-Warmup {
 ApplyContractions-Term {
   (Brackets e.Expr) (e.Contrs) = (Brackets <ApplyContractions e.Expr (e.Contrs)>);
 
-  (CallBrackets t.F e.Args) (e.Contrs)
-    = (CallBrackets t.F <ApplyContractions e.Args (e.Contrs)>);
+  (CallBrackets e.Args) (e.Contrs)
+    = (CallBrackets <ApplyContractions e.Args (e.Contrs)>);
+
+  (ColdCallBrackets e.Args) (e.Contrs)
+    = (ColdCallBrackets <ApplyContractions e.Args (e.Contrs)>);
+
+  (ClosureBrackets e.Args) (e.Contrs)
+    = (ClosureBrackets <ApplyContractions e.Args (e.Contrs)>);
 
   (ADT-Brackets (e.Name) e.Expr) (e.Contrs)
     = (ADT-Brackets (e.Name) <ApplyContractions e.Expr (e.Contrs)>);
