@@ -319,7 +319,7 @@ InlineSentence-Aux {
                 WithWarmup
               >
               : e.S
-            = ((e.Left) (e.S)) t.newFunc
+            = ((e.Left) (e.S)) t.newFunc;
 
           /*
             Замена вызова на холодный
