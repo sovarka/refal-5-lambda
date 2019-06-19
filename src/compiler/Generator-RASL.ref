@@ -5,7 +5,7 @@ $EXTERN DisplayName;
 
 $INCLUDE "Opcodes";
 
-$DRIVE NumberFromOpcode, NumberFromBracket, BlockTypeNumber;
+*$DRIVE NumberFromOpcode, NumberFromBracket, BlockTypeNumber;
 
 $ENTRY GenProgram-RASL {
   (

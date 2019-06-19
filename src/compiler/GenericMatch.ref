@@ -513,10 +513,11 @@ Solve-TermEquation {
       : t.NewVars e.NewIndex
       = Success
         t.NewVars
+        <Prout 'NEW EQUATION:' ((t.PTvar) ':' ((TkVariable 'e' e.NewIndex)))>
         <AddContraction
-          (t.PTvar ':' (TkVariable 'e' e.NewIndex))
+          (t.PTvar ':' (Brackets (TkVariable 'e' e.NewIndex)))
           (e.Contrs)
-          e.Equations ((t.PTvar) ':' ((TkVariable 'e' e.NewIndex)))
+          e.Equations (((TkVariable 'e' e.NewIndex)) ':' (e.HBody))
           (e.Assigns)
         >;
 

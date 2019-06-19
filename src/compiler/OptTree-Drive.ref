@@ -32,8 +32,18 @@ $ENTRY OptTree-Drive {
   <OptTree-Drive-Finalize s.OptDrive (e.DriveInfo) e.AST> == e.AST^
 */
 $ENTRY OptTree-Drive-Finalize {
-  s.OptDrive ((e.Names) e.Info) e.AST = e.AST;
+  s.OptDrive ((e.Names) e.Info) e.AST = <RemoveFuncs e.AST>;
 }
+
+RemoveFuncs {
+  e.B (Function (e.Name) e.Body1)
+  e.M (Function (e.Name) e.Body2)
+  e.E = <Prout 'DUPLICATED!!!: ' e.Name>
+      <RemoveFuncs e.B (Function (e.Name) e.Body1) e.M e.E>;
+
+  e.Other = e.Other;
+}
+
 
 /* Функция генерирует имена остаточных прогоняемых функций */
 
@@ -377,19 +387,21 @@ DriveSentence-Aux {
           = <ApplySolutions
               ((e.Left) (e.Expr)) (e.RS) ((() (e.Assigns))) t.DrivenF
             >
-            : e.Sentences = e.Sentences;
-*          = <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
-*            <Prout 'FunctionName:' e.Name>
-*            <Prout 'ARGS: ' e.Args '\n'>
-*            <Prout '/n ------------------------------- /n'>
-*            <Prout 'SUCCESSFUL DRIVE CLEAN: ' e.Sentences
-*                      '\nBEFORELEFT:' e.Left
-*                      '\nBEFORERIGHT:' e.Right
-*                      '\n LEFTEQ: ' e.Args
-*                      '\n RIGHTEQ: ' e.LS
-*                      '\n EXPR!!' e.Expr
-*                      '\n NAME' e.Name
-*                      '\nSOLUTIONS:' e.Assigns> e.Sentences ;
+            : e.Sentences
+*            = e.Sentences;
+          = <Prout '/n ------------------------------- /n'>
+            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
+            <Prout 'FunctionName:' e.Name>
+            <Prout 'ARGS: ' e.Args '\n'>
+            <Prout '/n ------------------------------- /n'>
+            <Prout 'SUCCESSFUL DRIVE CLEAN: ' e.Sentences
+                      '\nBEFORELEFT:' e.Left
+                      '\nBEFORERIGHT:' e.Right
+                      '\n LEFTEQ: ' e.Args
+                      '\n RIGHTEQ: ' e.LS
+                      '\n EXPR!!' e.Expr
+                      '\n NAME' e.Name
+                      '\nSOLUTIONS:' e.Assigns> e.Sentences ;
 
         /*
            В случае "грязного" решения добавляем вызов остаточной
@@ -414,7 +426,21 @@ DriveSentence-Aux {
               WithWarmup
             >
             : e.S
-          = e.Sentences ((e.Left) (e.S)) t.newFunc;
+          = <Prout '/n ------------------------------- /n'>
+            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
+            <Prout 'FunctionName:' e.Name>
+            <Prout 'ARGS: ' e.Args '\n'>
+            <Prout '/n ------------------------------- /n'>
+            <Prout 'SUCCESSFUL DRIVE DIRTY: ' e.Sentences
+                      '\nBEFORELEFT:' e.Left
+                      '\nBEFORERIGHT:' e.Right
+                      '\n LEFTEQ: ' e.Args
+                      '\n RIGHTEQ: ' e.LS
+                      '\n EXPR!!' e.Expr
+                      '\n NAME' e.Name
+                      '\n NEWFUNC: ' e.NewName
+                      '\nSOLUTIONS:' e.M>
+          e.Sentences ((e.Left) (e.S)) (Function s.Sc1 (e.NewName) e.Body);
 
         /*
           В случае неудачи нужно заменить прогоняемый вызов
@@ -434,7 +460,21 @@ DriveSentence-Aux {
               WithWarmup
             >
             : e.S
-          = ((e.Left) (e.S)) t.newFunc;
+          = <Prout '/n ------------------------------- /n'>
+            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
+            <Prout 'FunctionName:' e.Name>
+            <Prout 'ARGS: ' e.Args '\n'>
+            <Prout '/n ------------------------------- /n'>
+            <Prout 'SUCCESSFUL DRIVE Failure: ' e.S
+                      '\nBEFORELEFT:' e.Left
+                      '\nBEFORERIGHT:' e.Right
+                      '\n LEFTEQ: ' e.Args
+                      '\n RIGHTEQ: ' e.LS
+                      '\n EXPR!!' e.Expr
+                      '\n NAME' e.Name
+                      '\n NEWFUNC: ' e.NewName>
+
+          ((e.Left) (e.S)) (Function s.Sc1 (e.NewName) e.Body);
 
         /*
           Замена вызова на холодный
