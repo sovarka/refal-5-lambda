@@ -32,14 +32,13 @@ $ENTRY OptTree-Drive {
   <OptTree-Drive-Finalize s.OptDrive (e.DriveInfo) e.AST> == e.AST^
 */
 $ENTRY OptTree-Drive-Finalize {
-  s.OptDrive ((e.Names) e.Info) e.AST = <RemoveFuncs e.AST>;
+  s.OptDrive ((e.Names) e.Info) e.AST = /*<RemoveFuncs e.AST>*/ e.AST;
 }
 
 RemoveFuncs {
   e.B (Function (e.Name) e.Body1)
   e.M (Function (e.Name) e.Body2)
-  e.E = <Prout 'DUPLICATED!!!: ' e.Name>
-      <RemoveFuncs e.B (Function (e.Name) e.Body1) e.M e.E>;
+  e.E = <RemoveFuncs e.B (Function (e.Name) e.Body1) e.M e.E>;
 
   e.Other = e.Other;
 }
@@ -373,6 +372,19 @@ DriveSentence-Aux {
 
     /* Попытка оптимизации, только если вызов пассивный */
     , <IsPassiveCall e.Args>: True
+
+    /* Заранее конструируем остаточную функцию */
+    , <CreateRemainderDrivenFunc
+        s.ScopeClass (e.Name) e.Rest
+      >
+      : t.newFunc
+
+    , t.newFunc : (Function s.Sc1 (e.NewName) e.Body)
+
+    /* Проверяем, пригодна ли остаточная функция для прогонки */
+
+    , <IsDrivable e.Body>: True
+
     = <Solve
         (<ExtractVariables ((e.Left e.Right) ())>)
         ((e.Args) ':' (e.LS))
@@ -388,21 +400,20 @@ DriveSentence-Aux {
               ((e.Left) (e.Expr)) (e.RS) ((() (e.Assigns))) t.DrivenF
             >
             : e.Sentences
-*            = e.Sentences;
-          = <Prout '/n ------------------------------- /n'>
-            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
-            <Prout 'FunctionName:' e.Name>
-            <Prout 'ARGS: ' e.Args '\n'>
-            <Prout '/n ------------------------------- /n'>
-            <Prout 'SUCCESSFUL DRIVE CLEAN: ' e.Sentences
-                      '\nBEFORELEFT:' e.Left
-                      '\nBEFORERIGHT:' e.Right
-                      '\n LEFTEQ: ' e.Args
-                      '\n RIGHTEQ: ' e.LS
-                      '\n EXPR!!' e.Expr
-                      '\n NAME' e.Name
-                      '\nSOLUTIONS:' e.Assigns> e.Sentences ;
-
+            = e.Sentences <Prout 'CLEAN' e.Name>;
+*          = <Prout '/n ------------------------------- /n'>
+*            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
+*            <Prout 'FunctionName:' e.Name>
+*            <Prout 'ARGS: ' e.Args '\n'>
+*            <Prout '/n ------------------------------- /n'>
+*            <Prout 'SUCCESSFUL DRIVE CLEAN: ' e.Sentences
+*                      '\nBEFORELEFT:' e.Left
+*                      '\nBEFORERIGHT:' e.Right
+*                      '\n LEFTEQ: ' e.Args
+*                      '\n RIGHTEQ: ' e.LS
+*                      '\n EXPR!!' e.Expr
+*                      '\n NAME' e.Name
+*                      '\nSOLUTIONS:' e.Assigns>
         /*
            В случае "грязного" решения добавляем вызов остаточной
            прогоняемой функции (Только при L-выражении)
@@ -413,11 +424,6 @@ DriveSentence-Aux {
               ((e.Left) (e.Expr)) (e.RS) (e.M) t.DrivenF
             >
             : e.Sentences
-          = <CreateRemainderDrivenFunc
-              s.ScopeClass (e.Name) e.Rest
-            >
-            : t.newFunc
-            , t.newFunc : (Function s.Sc1 (e.NewName) e.Body)
           = <ApplyContractions
               e.Expr
               (((TkVariable 'e' DRIVEN 0)
@@ -426,32 +432,28 @@ DriveSentence-Aux {
               WithWarmup
             >
             : e.S
-          = <Prout '/n ------------------------------- /n'>
-            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
-            <Prout 'FunctionName:' e.Name>
-            <Prout 'ARGS: ' e.Args '\n'>
-            <Prout '/n ------------------------------- /n'>
-            <Prout 'SUCCESSFUL DRIVE DIRTY: ' e.Sentences
-                      '\nBEFORELEFT:' e.Left
-                      '\nBEFORERIGHT:' e.Right
-                      '\n LEFTEQ: ' e.Args
-                      '\n RIGHTEQ: ' e.LS
-                      '\n EXPR!!' e.Expr
-                      '\n NAME' e.Name
-                      '\n NEWFUNC: ' e.NewName
-                      '\nSOLUTIONS:' e.M>
-          e.Sentences ((e.Left) (e.S)) (Function s.Sc1 (e.NewName) e.Body);
+*          = <Prout '/n ------------------------------- /n'>
+*            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
+*            <Prout 'FunctionName:' e.Name>
+*            <Prout 'ARGS: ' e.Args '\n'>
+*            <Prout '/n ------------------------------- /n'>
+*            <Prout 'NEWBODY' e.Body>
+*            <Prout 'SUCCESSFUL DRIVE DIRTY: ' e.Sentences
+*                      '\nBEFORELEFT:' e.Left
+*                      '\nBEFORERIGHT:' e.Right
+*                      '\n LEFTEQ: ' e.Args
+*                      '\n RIGHTEQ: ' e.LS
+*                      '\n EXPR!!' e.Expr
+*                      '\n NAME' e.Name
+*                      '\n NEWFUNC: ' e.NewName
+*                      '\nSOLUTIONS:' e.M>
+          = e.Sentences ((e.Left) (e.S)) (Function s.Sc1 (e.NewName) e.Body) <Prout 'DIRTY' e.NewName>;
 
         /*
           В случае неудачи нужно заменить прогоняемый вызов
           на вызов остаточной функции
         */
         Failure
-          = <CreateRemainderDrivenFunc
-              s.ScopeClass (e.Name) e.Rest
-            >
-            : t.newFunc
-            , t.newFunc : (Function s.Sc1 (e.NewName) e.Body)
           = <ApplyContractions
               e.Expr
               (((TkVariable 'e' DRIVEN 0)
@@ -460,21 +462,21 @@ DriveSentence-Aux {
               WithWarmup
             >
             : e.S
-          = <Prout '/n ------------------------------- /n'>
-            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
-            <Prout 'FunctionName:' e.Name>
-            <Prout 'ARGS: ' e.Args '\n'>
-            <Prout '/n ------------------------------- /n'>
-            <Prout 'SUCCESSFUL DRIVE Failure: ' e.S
-                      '\nBEFORELEFT:' e.Left
-                      '\nBEFORERIGHT:' e.Right
-                      '\n LEFTEQ: ' e.Args
-                      '\n RIGHTEQ: ' e.LS
-                      '\n EXPR!!' e.Expr
-                      '\n NAME' e.Name
-                      '\n NEWFUNC: ' e.NewName>
+*          = <Prout '/n ------------------------------- /n'>
+*            <Prout 'BF: ' e.Left '////\n' e.Right '\n'>
+*            <Prout 'FunctionName:' e.Name>
+*            <Prout 'ARGS: ' e.Args '\n'>
+*            <Prout '/n ------------------------------- /n'>
+*            <Prout 'SUCCESSFUL DRIVE Failure: ' e.S
+*                      '\nBEFORELEFT:' e.Left
+*                      '\nBEFORERIGHT:' e.Right
+*                      '\n LEFTEQ: ' e.Args
+*                      '\n RIGHTEQ: ' e.LS
+*                      '\n EXPR!!' e.Expr
+*                      '\n NAME' e.Name
+*                      '\n NEWFUNC: ' e.NewName>
 
-          ((e.Left) (e.S)) (Function s.Sc1 (e.NewName) e.Body);
+            = ((e.Left) (e.S)) (Function s.Sc1 (e.NewName) e.Body) <Prout e.NewName>;
 
         /*
           Замена вызова на холодный
@@ -731,6 +733,12 @@ ApplyContractions-Term {
   <CreateRemainderDrivenFunc s.ScopeClass (e.Name) e.Sentences>
     == t.Function
 */
+
+
+IsDrivable {
+    Sentences e.SentencesB ((e.Ls) (Condition e.Rest) e.Conditions (e.Rs)) e.SentencesE = False;
+    e.Other = True;
+}
 
 CreateRemainderDrivenFunc {
   s.ScopeClass (e.Name SUF e.Suffixes '*' s.N) e.Sentences =
